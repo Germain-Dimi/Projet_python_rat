@@ -1,26 +1,43 @@
 import socket
+import ssl
 
-def start_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(("0.0.0.0", 9999))  # Écoute sur toutes les interfaces
-    server_socket.listen(5)
-    print("Serveur en attente de connexions...")
+def ip():
+    hostname=socket.gethostname()
+    ip_address=socket.gethostbyname(hostname)
+    print("Server local IP :",ip_address)
+    return str(ip_address)
 
-    while True:
-        client_socket, address = server_socket.accept()
-        print(f"Connexion établie avec {address}")
-        client_socket.send(b"Bienvenue sur le serveur. Envoyez une commande : ")
+host = ip()
+port = 12700 
 
-        while True:
-            command = input("Commande à envoyer : ")
-            client_socket.send(command.encode())
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            if command.lower() == "exit":
-                print("Fermeture de la connexion.")
-                client_socket.close()
-                break
+server_socket.bind((host, port))
+server_socket.listen(5)
+print("Serveur up Listening on 12700")    
 
-            response = client_socket.recv(1024).decode()
-            print(f"Réponse du client : {response}")
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain("CERT/cert-server.pem", "CERT/cert-key.pem") 
+    
+server_ssl = context.wrap_socket(server_socket, server_side=True)
+    
+client_ssl, ip = server_ssl.accept()
+print("L'ip",ip,"c'est connecté")
 
-start_server()
+while True:
+    try:
+        #Send message
+        msg=str(input("Server : ")).encode()
+        client_ssl.send(msg)    
+
+            #Get message
+        msg=client_ssl.recv(1024).decode()
+        print(f"Client : {msg}")
+    except:
+            break
+print("-- END --")  
+client_ssl.close()
+server_ssl.close()
+server_socket.close()
+
+
